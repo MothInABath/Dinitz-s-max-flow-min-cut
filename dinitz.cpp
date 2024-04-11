@@ -23,10 +23,57 @@ struct Result
   std::vector<Partity> total_weights;
 };
 
+void print_matrix(vector<vector<unsigned>>& edges) {
+  for (unsigned i = 0; i < edges.size(); i++) {
+    for (unsigned j = 0; j < edges.size(); j++) {
+      cout << edges[i][j] << " ";
+    }
+    cout << endl;
+  }
+  cout << endl;
+}
 
 
-//TODO
-void unite(vector<Partity>& nodes, vector<vector<unsigned>>& edges) {
+void unite(vector<Partity>& nodes, vector<vector<unsigned>>& edges, Result& res, unsigned& source, unsigned& sink) {
+  cout << source << " " << sink << endl;
+
+  
+  for (unsigned dup = 0; dup < source; dup++) {
+    if (nodes[dup] == Partity::A) {
+
+      //add to source
+      for (unsigned j = 0; j < nodes.size(); j++) {
+        edges[source][j] += edges[dup][j];
+        edges[dup][j] = 0;
+        edges[j][dup] = 0;
+        edges[j][source] = edges[source][j];
+      }
+
+
+      edges[source][source] = 0;
+
+    }
+
+
+  }
+  
+
+
+  for (unsigned dup = 0; dup < sink; dup++) {
+    if (nodes[dup] != Partity::B) continue;
+
+    //add to sink
+    for (unsigned j = 0; j < nodes.size(); j++) {
+      edges[sink][j] += edges[dup][j];
+      edges[dup][j] = 0;
+      edges[j][dup] = 0;
+      edges[j][sink] = edges[sink][j];
+    }
+
+
+    edges[sink][sink] = 0;
+
+  }
 
 };
 
@@ -108,7 +155,7 @@ void dfs(vector<Partity>& nodes, vector<vector<unsigned>>& edges, vector<unsigne
       continue;
     }
 
-    //push the next accessible nodes
+    //push next accessible nodes
     for (unsigned i = 0; i < nodes.size(); i++) {
       if (node == i || source == i) continue;
 
@@ -117,9 +164,9 @@ void dfs(vector<Partity>& nodes, vector<vector<unsigned>>& edges, vector<unsigne
       }
     }
 
-    //deadend
+    //dead-end
     if (node == s.top()) {
-      cout << "Deadend" << endl;
+      cout << "Dead-end" << endl;
 
       //update node level to zero so that it won't be used again
       level[node] = 0;
@@ -154,7 +201,10 @@ void dinitz(vector<Partity>& nodes, vector<vector<unsigned>>& edges, Result& res
   }
 
   for (unsigned i = 0; i < nodes.size(); i++) {
-    if (level[i] == 0 && i != source) {
+    if (nodes[i] != Partity::UNKNOWN) {
+      res.total_weights.push_back(nodes[i]);
+    }
+    else if (level[i] == 0 && i != source) {
       cout << "B" << endl;
       res.total_weights.push_back(Partity::B);
     }
@@ -178,8 +228,13 @@ Result split_graph(const Graph& Graph) {
   unsigned source, sink;
   Result res;
 
-  unite(nodes, edges);
 
+
+  //set source sink nodes
+  for (unsigned i = 0; i < nodes.size(); i++) {
+    if (nodes[i] == Partity::A) source = i;
+    if (nodes[i] == Partity::B) sink = i;
+  }
   //save total weight of edges
   res.total = 0;
   for (unsigned i = 0; i < nodes.size(); i++) {
@@ -192,11 +247,9 @@ Result split_graph(const Graph& Graph) {
   res.total /= 2;
 
 
-  //set source sink nodes
-  for (unsigned i = 0; i < nodes.size(); i++) {
-    if (nodes[i] == Partity::A) source = i;
-    if (nodes[i] == Partity::B) sink = i;
-  }
+  print_matrix(edges);
+  unite(nodes, edges, res, source, sink);
+  print_matrix(edges);
 
   dinitz(nodes, edges, res, source, sink);
 
@@ -211,7 +264,6 @@ Result split_graph(const Graph& Graph) {
 
 using enum Partity;
 const std::vector<std::pair<unsigned, Graph>> test_data = {
-  /*
   { 92, Graph{ { {}, {}, B, {}, A, {}, }, {
     { 0, 8, 1, 9, 9, 6, },
     { 8, 0, 14, 11, 14, 11, },
@@ -250,7 +302,6 @@ const std::vector<std::pair<unsigned, Graph>> test_data = {
     { 10, 1, 2, 4, 14, 11, 5, 0, 10, },
     { 4, 8, 10, 6, 15, 5, 3, 10, 0, },
   } } },
-  */
   { 311, Graph{ { A, {}, {}, {}, B, {}, {}, {}, {}, {}, }, {
     { 0, 4, 4, 10, 8, 8, 13, 2, 9, 2, },
     { 4, 0, 3, 5, 9, 3, 14, 15, 13, 12, },
@@ -262,9 +313,7 @@ const std::vector<std::pair<unsigned, Graph>> test_data = {
     { 2, 15, 9, 10, 4, 8, 2, 0, 11, 3, },
     { 9, 13, 6, 13, 13, 7, 3, 11, 0, 13, },
     { 2, 12, 5, 12, 2, 13, 15, 3, 13, 0, },
-  } } }
-  /*
-  ,
+  } } },
   { 327, Graph{ { {}, {}, {}, {}, B, {}, {}, {}, {}, A, B, }, {
     { 0, 3, 2, 8, 5, 15, 5, 1, 14, 8, 8, },
     { 3, 0, 8, 12, 9, 2, 8, 12, 11, 6, 6, },
@@ -292,7 +341,6 @@ const std::vector<std::pair<unsigned, Graph>> test_data = {
     { 9, 12, 4, 15, 13, 8, 9, 3, 10, 1, 0, 6, },
     { 7, 12, 13, 8, 11, 1, 13, 14, 2, 14, 6, 0, },
   } } },
-  */
 };
 
 
@@ -307,7 +355,7 @@ void verify_result(unsigned total, const Graph& Graph, const Result& res) {
 
   for (unsigned i = 0; i < dest.size(); i++) {
     assert(dest[i] == B || dest[i] == A);
-    if (Graph.node[i] != Partity::UNKNOWN) assert(dest[i] == Graph.node[i]);
+    if (Graph.node[i] != UNKNOWN) assert(dest[i] == Graph.node[i]);
   }
 
   unsigned total_weights = 0;
@@ -318,6 +366,8 @@ void verify_result(unsigned total, const Graph& Graph, const Result& res) {
   assert(total == total_2);
   assert(total_weights == total_2);
 }
+
+
 
 int main() {
 
